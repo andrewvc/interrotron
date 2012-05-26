@@ -56,38 +56,6 @@ The following functions and variables are built in to Interrotron (though since 
 (upcase str) # uppercases a string
 (downcase) # lowercases a string
 (now) # returns the current DateTime
-    'if' => [proc {|pred,t_clause,f_clause| mat(pred) ? mat(t_clause) : mat(f_clause) }, :lazy_args],
-    'and' => [proc {|*args| args.reduce {|m,a| m && mat(a)}}, :lazy_args],
-    'or' => [proc {|*args| r = nil; args.detect {|a| r = mat(a) }; r}, :lazy_args],
-    'identity' => proc {|a| a},
-    'not' => proc {|a| !a},
-    '!' => proc {|a| !a},
-    '>' => proc {|a,b| a > b},
-    '<' => proc {|a,b| a < b},
-    '>=' => proc {|a,b| a >= b},
-    '<=' => proc {|a,b| a <= b},
-    '='  => proc {|a,b| a == b},
-    '!=' => proc {|a,b| a != b},
-    'true' => true,
-    'false' => false,
-    'nil' => nil,
-    '+' => proc {|*args| args.reduce(&:+)},
-    '-' => proc {|*args| args.reduce(&:-)},
-    '*' => proc {|*args| args.reduce(&:*)},
-    '/' => proc {|a,b| a / b},
-    '%' => proc {|a,b| a % b},
-    'floor' =>  proc {|a| a.floor},
-    'ceil' => proc {|a| a.ceil},
-    'round' => proc {|a| a.round},
-    'max' => proc {|*args| args.max},
-    'min' => proc {|*args| args.min},
-    'to_i' => proc {|a| a.to_i},
-    'to_f' => proc {|a| a.to_f},
-    'rand' => proc { rand },
-    'upcase' => proc {|a| a.upcase},
-    'downcase' => proc {|a| a.downcase},
-    'now' => proc { DateTime.now },
-    'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}}
 ``
 
 ## Contributing
