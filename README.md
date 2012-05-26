@@ -25,8 +25,10 @@ Interrotron.run("(my_proc (+ 2 2))", :my_proc => proc {|a| a*2 })
 # You can even pre-compile scripts to their an AST, creating a callable proc
 tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})
 compiled = tron.compile("(is_valid my_param)")
-compiled.call(:my_param => 'foo') # => true
-compiled.call(:my_param => 'bar') #=> false
+compiled.call(:my_param => 'foo')
+# => true
+compiled.call(:my_param => 'bar')
+#=> false
 
 # Since interrotron is meant for business rules, it handles dates as a 
 # native type as instances of ruby's DateTime class. You can use literals
