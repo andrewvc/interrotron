@@ -35,6 +35,12 @@ compiled.call(:my_param => 'bar')
 # for that like so:
 Interrotron.run('(> #dt{2010-09-04} start_date)', start_date: DateTime.parse('2012-12-12'))
 # => true
+
+# You can, of course, create arbitarily complex exprs
+Interrotron.run("(if false
+                     (+ 4 -3)
+                     (- 10 (+ 2 (+ 1 1))))")
+# => 6
 ```
 
 The following functions and variables are built in to Interrotron (though since its a lisp they're all just vars!):
