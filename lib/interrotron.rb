@@ -1,5 +1,6 @@
 require "interrotron/version"
 require 'date'
+require 'hashie/mash'
 
 # This is a Lispish DSL meant to define business rules
 # in environments where you do *not* want a turing complete language.
@@ -40,7 +41,7 @@ class Interrotron
     v.class == Proc ? v.call() : v
   end
   
-  DEFAULT_VARS = {
+  DEFAULT_VARS = Hashie::Mash.new({
     'if' => [proc {|pred,t_clause,f_clause| mat(pred) ? mat(t_clause) : mat(f_clause) }, :lazy_args],
     'and' => [proc {|*args| args.reduce {|m,a| m && mat(a)}}, :lazy_args],
     'or' => [proc {|*args| r = nil; args.detect {|a| r = mat(a) }; r}, :lazy_args],
@@ -73,17 +74,16 @@ class Interrotron
     'downcase' => proc {|a| a.downcase},
     'now' => proc { DateTime.now },
     'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}}
-  }
+  })
 
   # Takes 2 opts:
-  # :vars => {}, a hash of variables to introduce. Vars can act as either functions
+  # vars => {}, a hash of variables to introduce. Vars can act as either functions
   # (if they're procs) or as simple values
-  # :max_ops => 29, takes an integer which can be used to set a maximum number of expressions
+  # max_ops => 29, takes an integer which can be used to set a maximum number of expressions
   # to evaluate. It's a crude way to cap execution time
-  def initialize(opts={})
-    raise ArgumentError, "Expected an opts hash, not #{opts}" unless opts.is_a?(Hash)
-    @vars = DEFAULT_VARS.merge(opts[:vars] || {})
-    @max_ops = opts[:max_ops]
+  def initialize(vars={},max_ops=nil)
+    @vars = DEFAULT_VARS.merge(vars)
+    @max_ops = max_ops
   end
   
   def lex(str)
@@ -149,7 +149,7 @@ class Interrotron
     type, val = token
     return val unless type == :var
     raise SyntaxError, "Unbalanced lparen!" if val.is_a?(Array)
-    raise UndefinedVarError, "Var '#{var}' is undefined!" unless vars.has_key?(val)
+    raise UndefinedVarError, "Var '#{val}' is undefined!" unless vars.has_key?(val)
     vars[val]
   end
   
@@ -191,6 +191,10 @@ class Interrotron
       run_vars = @vars.merge(vars || {})
       run_expr(ast, run_vars, @max_ops)
     }
+  end
+
+  def self.compile(str)
+    Interrotron.new().compile(str)
   end
 
   def run(str,vars={})

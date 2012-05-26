@@ -54,4 +54,18 @@ describe "running" do
       run("(my_proc 4)", "my_proc" => proc {|a| a*2 }).should == 8
     end
   end
+
+  describe "intermediate compilation" do
+    # Setup an interrotron obj with some default vals
+    tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})
+    compiled = tron.compile("(is_valid my_param)")
+    compiled.call(:my_param => 'foo').should == true
+    compiled.call(:my_param => 'bar').should == false
+  end
+
+  describe "readme examples" do
+    it "should execute the simple custom var one" do
+      Interrotron.run('(> 51 custom_var)', 'custom_var' => 10).should == true
+    end
+  end
 end
