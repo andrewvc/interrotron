@@ -56,7 +56,7 @@ The following functions and variables are built in to Interrotron (though since 
 (upcase str) # uppercases a string
 (downcase) # lowercases a string
 (now) # returns the current DateTime
-``
+```
 
 ## Contributing
 
