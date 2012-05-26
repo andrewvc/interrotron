@@ -55,6 +55,28 @@ describe "running" do
     end
   end
 
+  describe "date times" do
+    it "should parse and compare them properly" do
+      run('(> #dt{2010-09-04} start_date)', start_date: DateTime.parse('2012-12-12'))
+    end
+  end
+
+  describe "cond" do
+    it "should work for a simple case where there is a match" do
+      run("(cond (> 1 2) (* 2 2)
+                 (< 5 10) 'ohai')").should == 'ohai'
+    end
+    it "should return nil when no matches available" do
+      run("(cond (> 1 2) (* 2 2)
+                 false 'ohai')").should == nil
+    end
+    it "should support true as a fallthrough clause" do
+      run("(cond (> 1 2) (* 2 2)
+                 false 'ohai'
+                 true  'backup')").should == 'backup'
+    end
+  end
+
   describe "intermediate compilation" do
     # Setup an interrotron obj with some default vals
     tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})

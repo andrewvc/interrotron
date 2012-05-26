@@ -24,6 +24,7 @@ class Interrotron
   class SyntaxError < ParserError; end
   class UndefinedVarError < ParserError; end
   class OpsThresholdError < StandardError; end
+  class InterroArgumentError < StandardError; end
 
   TOKENS = [
             [:lpar, /\(/],
@@ -43,6 +44,16 @@ class Interrotron
   
   DEFAULT_VARS = Hashie::Mash.new({
     'if' => [proc {|pred,t_clause,f_clause| mat(pred) ? mat(t_clause) : mat(f_clause) }, :lazy_args],
+    'cond' => [proc {|*args|
+                 raise InterroArgumentError, "Cond requires at least args" unless args.length >= 3
+                 raise InterroArgumentError, "Cond requires an even # of args!" unless args.length.even?
+                 res = nil
+                 args.each_slice(2).any? {|slice|
+                   pred, expr = slice
+                   res = mat(expr) if mat(pred)
+                 }
+                 res
+               }, :lazy_args],
     'and' => [proc {|*args| args.reduce {|m,a| m && mat(a)}}, :lazy_args],
     'or' => [proc {|*args| r = nil; args.detect {|a| r = mat(a) }; r}, :lazy_args],
     'identity' => proc {|a| a},
