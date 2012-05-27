@@ -166,8 +166,7 @@ class Interrotron
   end
   
   def resolve_token(token)
-    case token.type
-    when :var
+    if  token.type == :var
       frame = @stack.reverse.find {|frame| frame.has_key?(token.value) }
       raise UndefinedVarError, "Var '#{token.value}' is undefined!" unless frame
       frame[token.value]
@@ -177,9 +176,10 @@ class Interrotron
   end
   
   def register_op
-    return unless @max_ops
-    @op_count += 1
-    raise OpsThresholdError, "Exceeded max ops(#{@max_ops}) allowed!" if @op_count && @op_count > @max_ops
+    return unless @max_ops # noop when op counting disabled
+    if  (@op_count+=1) > @max_ops
+      raise OpsThresholdError, "Exceeded max ops(#{@max_ops}) allowed!"
+    end
   end
   
   def vm_eval(expr,max_ops=nil)
@@ -193,7 +193,6 @@ class Interrotron
       vm_eval(expanded)
     else
       args = expr[1..-1].map {|e|vm_eval(e)}
-
       head.is_a?(Proc) ? head.call(*args) : head
     end
   end

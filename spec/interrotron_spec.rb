@@ -151,4 +151,10 @@ describe "running" do
       }.should raise_exception(Interrotron::OpsThresholdError)
     end
   end
+
+  describe "empty input" do
+    it "should return nil" do
+      run("").should be_nil
+    end
+  end
 end
