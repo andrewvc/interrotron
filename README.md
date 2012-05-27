@@ -21,10 +21,10 @@ Interrotron.run('(> 51 custom_var)', :custom_var => 10)
 # => true
 
 #You can inject functions just as easily
-Interrotron.run("(my_proc (+ 2 2))", :my_proc => proc {|a| a*2 })
+Interrotron.run("(doubler (+ 2 2))", :doubler => proc {|a| a*2 })
 # => 8
 
-# You can even pre-compile scripts to their an AST, creating a callable proc
+# You can even pre-compile scripts for speed / re-use!
 tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})
 compiled = tron.compile("(is_valid my_param)")
 compiled.call(:my_param => 'foo')
