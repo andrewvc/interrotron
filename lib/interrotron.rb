@@ -1,8 +1,6 @@
 require "interrotron/version"
 require 'date'
 require 'hashie/mash'
-require 'yaml'
-require 'debugger'
 
 # This is a Lispish DSL meant to define business rules
 # in environments where you do *not* want a turing complete language.
