@@ -15,6 +15,8 @@ Either add the `interrotron` gem, or just copy and paste [interrotron.rb](https:
 
 ## Usage
 
+Interrotron can be executed either by calling the lib, or via the 'interrotron' executable that ships with the gem.
+
 ```ruby
 # Injecting a variable and evaluating a function is easy!
 Interrotron.run('(> 51 custom_var)', :custom_var => 10) 
