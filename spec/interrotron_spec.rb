@@ -130,6 +130,7 @@ describe "running" do
 
   describe "functions" do
     it "should have access to vars they've bound" do
+      pending
       run("((fn (n) (* n 2)) 5)").should == 10
     end
   end
