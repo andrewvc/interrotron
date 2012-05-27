@@ -2,8 +2,8 @@ require 'interrotron'
 
 describe "running" do
   
-  def run(s,vars={})
-    Interrotron.run(s,vars)
+  def run(s,vars={},max_ops=nil)
+    Interrotron.run(s,vars,max_ops)
   end
   
   it "should exec identity correctly" do
@@ -138,6 +138,17 @@ describe "running" do
   describe "readme examples" do
     it "should execute the simple custom var one" do
       Interrotron.run('(> 51 custom_var)', 'custom_var' => 10).should == true
+    end
+  end
+
+  describe "op counter" do
+    it "should not stop scripts under or at the threshold" do
+      run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 4)
+    end
+    it "should terminate with the proper exception if over the threshold" do
+      proc {
+        run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 3)
+      }.should raise_exception(Interrotron::OpsThresholdError)
     end
   end
 end

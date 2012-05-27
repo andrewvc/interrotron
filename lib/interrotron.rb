@@ -112,9 +112,14 @@ class Interrotron
   def initialize(vars={},max_ops=nil)
     @max_ops = max_ops
     @instance_default_vars = DEFAULT_VARS.merge(vars)
+  end
+
+  def reset!
+    @op_count = 0
     @stack = [@instance_default_vars]
   end
   
+  # Converts a string to a flat array of Token objects
   def lex(str)
     return [] if str.nil?
     tokens = []
@@ -183,16 +188,18 @@ class Interrotron
       token.value
     end
   end
-
-  def fn
-    
+  
+  def register_op
+    return unless @max_ops
+    @op_count += 1
+    raise OpsThresholdError, "Exceeded max ops(#{@max_ops}) allowed!" if @op_count && @op_count > @max_ops
   end
   
-  def vm_eval(expr,max_ops=nil,ops_cnt=0)
+  def vm_eval(expr,max_ops=nil)
     return resolve_token(expr) if expr.is_a?(Token)
     return nil if expr.empty?
-    raise OpsThresholdError, "Exceeded max ops(#{max_ops}) allowed!" if max_ops && ops_cnt > max_ops
-
+    register_op
+    
     head = vm_eval(expr[0])
     if head.is_a?(Macro)
       expanded = head.call(self, *expr[1..-1])
@@ -211,7 +218,9 @@ class Interrotron
     tokens = lex(str)
     ast = parse(tokens)
 
-    proc {|vars| 
+    proc {|vars,max_ops|
+      reset!
+      @max_ops = max_ops
       @stack = [@instance_default_vars.merge(vars)]
       vm_eval(ast)
     }
@@ -221,11 +230,11 @@ class Interrotron
     Interrotron.new().compile(str)
   end
 
-  def run(str,vars={})
-    compile(str).call(vars)
+  def run(str,vars={},max_ops=nil)
+    compile(str).call(vars,max_ops)
   end
 
-  def self.run(str,vars={})
-    Interrotron.new().run(str,vars)
+  def self.run(str,vars={},max_ops=nil)
+    Interrotron.new().run(str,vars,max_ops)
   end
 end
