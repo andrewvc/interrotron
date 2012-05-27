@@ -63,19 +63,19 @@ class Interrotron
   end
 
   DEFAULT_VARS = Hashie::Mash.new({
-    'if' => Macro.new {|i,pred,t_clause,f_clause| i.run_expr(pred) ? t_clause : f_clause },
+    'if' => Macro.new {|i,pred,t_clause,f_clause| i.vm_eval(pred) ? t_clause : f_clause },
     'cond' => Macro.new {|i,*args|
                  raise InterroArgumentError, "Cond requires at least 3 args" unless args.length >= 3
                  raise InterroArgumentError, "Cond requires an even # of args!" unless args.length.even?
                  res = qvar('nil')
                  args.each_slice(2).any? {|slice|
                    pred, expr = slice
-                   res = expr if i.run_expr(pred)
+                   res = expr if i.vm_eval(pred)
                  }
                  res
     },
-    'and' => Macro.new {|i,*args| args.all? {|a| i.run_expr(a)} ? args.last : qvar('false')  },
-    'or' => Macro.new {|i,*args| args.detect {|a| i.run_expr(a) } || qvar('false') },
+    'and' => Macro.new {|i,*args| args.all? {|a| i.vm_eval(a)} ? args.last : qvar('false')  },
+    'or' => Macro.new {|i,*args| args.detect {|a| i.vm_eval(a) } || qvar('false') },
     'array' => proc {|*args| args},
     'identity' => proc {|a| a},
     'not' => proc {|a| !a},
@@ -111,11 +111,6 @@ class Interrotron
     'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}}
   })
 
-  # Takes 2 opts:
-  # vars => {}, a hash of variables to introduce. Vars can act as either functions
-  # (if they're procs) or as simple values
-  # max_ops => 29, takes an integer which can be used to set a maximum number of expressions
-  # to evaluate. It's a crude way to cap execution time
   def initialize(vars={},max_ops=nil)
     @max_ops = max_ops
     @instance_default_vars = DEFAULT_VARS.merge(vars)
@@ -180,11 +175,10 @@ class Interrotron
     expr
   end
   
-  def resolve_token(token, stack)
-    stack = @stack
+  def resolve_token(token)
     case token.type
     when :var
-      frame = stack.reverse.find {|frame| frame.has_key?(token.value) }
+      frame = @stack.reverse.find {|frame| frame.has_key?(token.value) }
       raise UndefinedVarError, "Var '#{token.value}' is undefined!" unless frame
       frame[token.value]
     else
@@ -196,17 +190,17 @@ class Interrotron
     
   end
   
-  def run_expr(expr,stack=nil,max_ops=nil,ops_cnt=0)
-    return resolve_token(expr, stack) if expr.is_a?(Token)
+  def vm_eval(expr,max_ops=nil,ops_cnt=0)
+    return resolve_token(expr) if expr.is_a?(Token)
     return nil if expr.empty?
     raise OpsThresholdError, "Exceeded max ops(#{max_ops}) allowed!" if max_ops && ops_cnt > max_ops
 
-    head = run_expr(expr[0])
+    head = vm_eval(expr[0])
     if head.is_a?(Macro)
       expanded = head.call(self, *expr[1..-1])
-      run_expr(expanded)
+      vm_eval(expanded)
     else
-      args = expr[1..-1].map {|e|run_expr(e)}
+      args = expr[1..-1].map {|e|vm_eval(e)}
 
       head.is_a?(Proc) ? head.call(*args) : head
     end
@@ -219,10 +213,9 @@ class Interrotron
     tokens = lex(str)
     ast = parse(tokens)
 
-    puts y(ast)
     proc {|vars| 
       @stack = [@instance_default_vars.merge(vars)]
-      run_expr(ast)
+      vm_eval(ast)
     }
   end
 
