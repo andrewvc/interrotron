@@ -190,4 +190,22 @@ describe "running" do
       run("(apply + (array 1 2 3))").should == 6
     end
   end
+  
+  describe "conversions" do
+    it "should convert ints" do
+      res = run("(int '2')")
+      res.should == 2
+      res.should be_a(Fixnum)
+    end
+
+    it "should convert floats" do
+      res = run("(float '2.5')")
+      res.should == 2.5
+      res.should be_a(Float)
+    end
+
+    it "should parse dates and times" do
+      run("(time '2012-05-01')").should == DateTime.parse("2012-05-01").to_time
+    end
+  end
 end

@@ -66,12 +66,11 @@ The following functions and variables are built in to Interrotron (and more are 
 (floor expr) ; equiv to num.floor
 (ceil expr) ; equiv to num.ceil
 (round expr) ; equiv to num.round
-(to_i expr) ; int conversion
-(to_f expr) ; float conversion
+(int expr) ; int conversion
+(float expr) ; float conversion
 (rand) ; returns a random float between 0 and 1
 (upcase str) ; uppercases a string
 (downcase) ; lowercases a string
-
 (array e1, e2, ...) ; creates an array
 (max arr) ; returns the largest element of an array
 (min arr) ; returns the smallest element of an array
@@ -87,6 +86,7 @@ The following functions and variables are built in to Interrotron (and more are 
 (months n) ; n * secs_in_a_month
 (ago n) ; yields a time in seconds from now
 (from-now n) ; yields a time in seconds from now
+(time 'str') ; parses a string to a Time
 ```
 
 ## Contributing
