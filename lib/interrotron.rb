@@ -48,8 +48,10 @@ class Interrotron
             [:rpar, /\)/],
             [:fn, /fn/],
             [:var, /[A-Za-z_><\+\>\<\!\=\*\/\%\-]+/],
-            [:num, /(\-?[0-9]+(\.[0-9]+)?)/],
-            [:datetime, /#dt\{([^\{]+)\}/, {capture: 1}],
+            [:num, /(\-?[0-9]+(\.[0-9]+)?)/, 
+             {cast: proc {|v| v =~ /\./ ? v.to_f : v.to_i }}],
+            [:datetime, /#dt\{([^\{]+)\}/,
+             {capture: 1, cast: proc {|v| DateTime.parse(v) }}],
             [:spc, /\s+/, {discard: true}],
             [:str, /"([^"\\]*(\\.[^"\\]*)*)"/, {capture: 1}],
             [:str, /'([^'\\]*(\\.[^'\\]*)*)'/, {capture: 1}]
@@ -130,10 +132,12 @@ class Interrotron
         if !matches || !matches.pre_match.empty?
           false
         else
-          mlen = matches[0].length
-          str = str[mlen..-1]
-          m = matches[opts[:capture] || 0]
-          tokens << Token.new(name, m) unless opts[:discard] == true
+          str = str[matches[0].length..-1]
+          unless opts[:discard] == true
+            val = matches[opts[:capture] || 0]
+            val = opts[:cast].call(val) if opts[:cast]
+            tokens << Token.new(name, val)
+          end
           true
         end
       }
@@ -142,39 +146,22 @@ class Interrotron
     tokens
   end
   
-  # Transforms token values to ruby types
-  def cast(t)
-    new_val = case t.type
-              when :num
-                t.value =~ /\./ ? t.value.to_f : t.value.to_i
-              when :datetime
-                DateTime.parse(t.value)
-              else
-                t.value
-              end
-    t.value = new_val
-    t
-  end
-  
   def parse(tokens)
-    return [] if tokens.empty?
+    return [] if !tokens ||tokens.empty?
     expr = []
-    t = tokens.shift
-    if t.type == :lpar
-      while t = tokens[0]
-        if t.type == :lpar
-          expr << parse(tokens)
-        else
-          tokens.shift
-          break if t.type == :rpar
-          expr << cast(t)
-        end
+    
+    while !tokens.empty?
+      t = tokens.shift
+      case t.type
+      when :lpar
+        expr << parse(tokens)
+      when :rpar
+        return expr
+      else
+        expr << t
       end
-    elsif t.type != :rpar
-      tokens.shift
-      expr << cast(t)
-      #raise SyntaxError, "Expected :lparen, got #{t} while parsing #{tokens}"
     end
+    
     expr
   end
   

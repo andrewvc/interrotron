@@ -46,7 +46,7 @@ Interrotron.run("(if false
 
 # Additionally, it is possible to constrain execution to a maximum number of
 # operations by passing in a third argument
-Interrotron.run("str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 4)
+Interrotron.run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 3)
 # => raises Interrotron::OpsThresholdError since 4 operations were executed
 
 ```

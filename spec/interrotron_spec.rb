@@ -143,11 +143,11 @@ describe "running" do
 
   describe "op counter" do
     it "should not stop scripts under or at the threshold" do
-      run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 4)
+      run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 5)
     end
     it "should terminate with the proper exception if over the threshold" do
       proc {
-        run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 3)
+        run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 4)
       }.should raise_exception(Interrotron::OpsThresholdError)
     end
   end
