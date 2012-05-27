@@ -4,8 +4,8 @@ require File.expand_path('../lib/interrotron/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Andrew Cholakian"]
   gem.email         = ["andrew@andrewvc.com"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
+  gem.description   = %q{A tiny, embeddable, lisp VM}
+  gem.summary       = %q{A lisp VM meant to run with guarantees on execution for business rules}
   gem.homepage      = ""
 
   gem.files         = `git ls-files`.split($\)
