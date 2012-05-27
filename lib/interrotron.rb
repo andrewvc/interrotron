@@ -193,7 +193,7 @@ class Interrotron
     end
   end
   
-  def iro_eval(expr,max_ops=nil)
+  def iro_eval(expr)
     return resolve_token(expr) if expr.is_a?(Token)
     return nil if expr.empty?
     register_op
@@ -214,14 +214,11 @@ class Interrotron
   # Use if you want to repeatedly execute one script, this
   # Will only lex/parse once
   def compile(str)
-    tokens = lex(str)
-    ast = parse(tokens)
-
+    ast = parse(lex(str))
     proc {|vars,max_ops|
       reset!
       @max_ops = max_ops
       @stack = [@instance_default_vars.merge(vars)]
-      #iro_eval(ast)
       ast.map {|expr| iro_eval(expr)}.last
     }
   end
