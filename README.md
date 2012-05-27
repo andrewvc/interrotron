@@ -47,25 +47,25 @@ Interrotron.run("(if false
 
 The following functions and variables are built in to Interrotron (and more are on the way!):
 ```clojure
-(if pred then else) # it's an if / else statement
-(cond pred1 clause1 pred2 clause2 true fallbackclause) # like a case statement
-(and e1, e2, ...) # logical and, returns last arg if true
-(or e1, e2, ...) # logical or, returns first true arg
-(not expr) # negates
-(! expr) # negates
-(identity expr) # returns its argument
-(str s1, s2, ...) # converts its args to strings, also concatenates them
-(floor expr) # equiv to num.floor
-(ceil expr) # equiv to num.ceil
-(round expr) # equiv to num.round
-(max lst) # returns the largest element in a list
-(min lst) # returns the smallest element in a list
-(to_i expr) # int conversion
-(to_f expr) # float conversion
-(rand) # returns a random float between 0 and 1
-(upcase str) # uppercases a string
-(downcase) # lowercases a string
-(now) # returns the current DateTime
+(if pred then else) ; it's an if / else statement
+(cond pred1 clause1 pred2 clause2 true fallbackclause) ; like a case statement
+(and e1, e2, ...) ; logical and, returns last arg if true
+(or e1, e2, ...) ; logical or, returns first true arg
+(not expr) ; negates
+(! expr) ; negates
+(identity expr) ; returns its argument
+(str s1, s2, ...) ; converts its args to strings, also concatenates them
+(floor expr) ; equiv to num.floor
+(ceil expr) ; equiv to num.ceil
+(round expr) ; equiv to num.round
+(max lst) ; returns the largest element in a list
+(min lst) ; returns the smallest element in a list
+(to_i expr) ; int conversion
+(to_f expr) ; float conversion
+(rand) ; returns a random float between 0 and 1
+(upcase str) ; uppercases a string
+(downcase) ; lowercases a string
+(now) ; returns the current DateTime
 ```
 
 ## Contributing
