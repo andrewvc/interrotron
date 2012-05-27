@@ -59,9 +59,22 @@ describe "running" do
     end
   end
 
-  describe "date times" do
+  describe "times" do
     it "should parse and compare them properly" do
-      run('(> #dt{2010-09-04} start_date)', start_date: DateTime.parse('2012-12-12'))
+      run('(> #t{2010-09-04} start_date)', start_date: DateTime.parse('2012-12-12').to_time)
+    end
+    it "should understand days, minutes, seconds, and hours, as integers" do
+      run("(+ (days 1) (minutes 1) (hours 1) (seconds 1))").should == 90061
+    end
+
+    it "should add the time using from-now" do
+      n = Time.now
+      Time.should_receive(:now).twice().and_return(n)
+      run("(from-now (minutes 1))").to_i.should == (Time.now + 60).to_i
+    end
+
+    it "should compare times using convenience multipliers correctly" do
+      run('(> (now) (ago (hours 12)))').should be_true
     end
   end
 
@@ -169,6 +182,12 @@ describe "running" do
   describe "empty input" do
     it "should return nil" do
       run("").should be_nil
+    end
+  end
+  
+  describe "apply macro" do
+    it "should spat an array into another function" do
+      run("(apply + (array 1 2 3))").should == 6
     end
   end
 end

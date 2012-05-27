@@ -50,8 +50,8 @@ class Interrotron
             [:var, /\A[A-Za-z_><\+\>\<\!\=\*\/\%\-\?]+/],
             [:num, /\A(\-?[0-9]+(\.[0-9]+)?)/, 
              {cast: proc {|v| v =~ /\./ ? v.to_f : v.to_i }}],
-            [:datetime, /\A#dt\{([^\{]+)\}/,
-             {capture: 1, cast: proc {|v| DateTime.parse(v) }}],
+            [:time, /\A#t\{([^\{]+)\}/,
+             {capture: 1, cast: proc {|v| DateTime.parse(v).to_time }}],
             [:spc, /\A\s+/, {discard: true}],
             [:str, /\A"([^"\\]*(\\.[^"\\]*)*)"/, {capture: 1}],
             [:str, /\A'([^'\\]*(\\.[^'\\]*)*)'/, {capture: 1}]
@@ -76,6 +76,7 @@ class Interrotron
     },
     'and' => Macro.new {|i,*args| args.all? {|a| i.iro_eval(a)} ? args.last : qvar('false')  },
     'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
+    'apply' => proc {|fn,arr| fn.call(*arr) },
     'array' => proc {|*args| args},
     'identity' => proc {|a| a},
     'not' => proc {|a| !a},
@@ -106,11 +107,19 @@ class Interrotron
     'member?' => proc {|v,arr| arr.member? v},
     'to_i' => proc {|a| a.to_i},
     'to_f' => proc {|a| a.to_f},
-    'rand' => proc { rand },
+    'rand' => proc {|n| rand n },
+    'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}},
+    'strip' => proc {|s| s.strip},
     'upcase' => proc {|a| a.upcase},
     'downcase' => proc {|a| a.downcase},
-    'now' => proc { DateTime.now },
-    'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}}
+    'now' => proc { Time.now },
+    'seconds' => proc {|n| n.to_i},
+    'minutes' => proc {|n| n.to_i * 60},
+    'hours' => proc {|n| n.to_i * 3600 },
+    'days' => proc {|n| n.to_i * 86400},
+    'months' => proc {|n| n.to_i * 2592000},
+    'ago' => proc {|t| Time.now - t},
+    'from-now' => proc {|t| Time.now + t}
   })
 
   def initialize(vars={},max_ops=nil)

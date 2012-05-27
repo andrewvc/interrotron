@@ -35,7 +35,9 @@ compiled.call(:my_param => 'bar')
 # Since interrotron is meant for business rules, it handles dates as a 
 # native type as instances of ruby's DateTime class. You can use literals
 # for that like so:
-Interrotron.run('(> #dt{2010-09-04} start_date)', start_date: DateTime.parse('2012-12-12'))
+Interrotron.run('(> #t{2010-09-04} start_date)', start_date: DateTime.parse('2012-12-12').to_time)
+# => true
+Interrotron.run('(> (now) (ago (hours 12)))')
 # => true
 
 # You can, of course, create arbitarily complex exprs
@@ -69,7 +71,7 @@ The following functions and variables are built in to Interrotron (and more are 
 (rand) ; returns a random float between 0 and 1
 (upcase str) ; uppercases a string
 (downcase) ; lowercases a string
-(now) ; returns the current DateTime
+
 (array e1, e2, ...) ; creates an array
 (max arr) ; returns the largest element of an array
 (min arr) ; returns the smallest element of an array
@@ -78,6 +80,13 @@ The following functions and variables are built in to Interrotron (and more are 
 (last arr) ; get arr tail
 (nth pos arr) ; get array at index
 (member? val arr) ; check if the array has a member with value 'val'
+(now) ; returns the current DateTime
+(seconds n); n, for completeness
+(minutes n); n * secs_in_a_minute
+(hours n); n * secs_in_a_hour
+(months n) ; n * secs_in_a_month
+(ago n) ; yields a time in seconds from now
+(from-now n) ; yields a time in seconds from now
 ```
 
 ## Contributing
