@@ -192,9 +192,11 @@ class Interrotron
     if head.is_a?(Macro)
       expanded = head.call(self, *expr[1..-1])
       iro_eval(expanded)
+    elsif head.is_a?(Proc)
+      args = expr[1..-1].map {|e| iro_eval(e) }
+      head.call(*args)
     else
-      args = expr[1..-1].map {|e|iro_eval(e)}
-      head.is_a?(Proc) ? head.call(*args) : head
+      raise InterroArgumentError, "Non FN/macro Value in head position!"
     end
   end
 
@@ -209,7 +211,8 @@ class Interrotron
       reset!
       @max_ops = max_ops
       @stack = [@instance_default_vars.merge(vars)]
-      iro_eval(ast)
+      #iro_eval(ast)
+      ast.map {|expr| iro_eval(expr)}.last
     }
   end
 

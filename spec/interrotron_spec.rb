@@ -151,8 +151,18 @@ describe "running" do
     end
     it "should terminate with the proper exception if over the threshold" do
       proc {
-        run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 4)
+        run("(str (+ 1 2) (+ 3 4) (+ 5 7))", {}, 3)
       }.should raise_exception(Interrotron::OpsThresholdError)
+    end
+  end
+
+  describe "multiple forms at the root" do
+    it "should return the second form" do
+      run("(+ 1 1) (+ 2 2)").should == 4
+    end
+
+    it "should raise an exception if a number is in a fn pos" do
+      proc { run("(1)") }.should raise_exception(Interrotron::InterroArgumentError)
     end
   end
 
