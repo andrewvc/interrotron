@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'interrotron'
+
+puts Interrotron.run(ARGV[0]).inspect
