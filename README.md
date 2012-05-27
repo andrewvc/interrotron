@@ -64,8 +64,6 @@ The following functions and variables are built in to Interrotron (and more are 
 (floor expr) ; equiv to num.floor
 (ceil expr) ; equiv to num.ceil
 (round expr) ; equiv to num.round
-(max lst) ; returns the largest element in a list
-(min lst) ; returns the smallest element in a list
 (to_i expr) ; int conversion
 (to_f expr) ; float conversion
 (rand) ; returns a random float between 0 and 1
@@ -73,6 +71,8 @@ The following functions and variables are built in to Interrotron (and more are 
 (downcase) ; lowercases a string
 (now) ; returns the current DateTime
 (array e1, e2, ...) ; creates an array
+(max arr) ; returns the largest element of an array
+(min arr) ; returns the smallest element of an array
 (length arr) ; get the length of an array
 (first arr) ; get arr head
 (last arr) ; get arr tail
