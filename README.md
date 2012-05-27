@@ -1,5 +1,7 @@
 # Interrotron
 
+[![Build Status](https://secure.travis-ci.org/andrewvc/interrotron.png?branch=master)](http://travis-ci.org/andrewvc/interrotron)
+
 A simple non-turing complete lisp meant to be embedded in apps as a rules engine. It is intentionally designed to limit the harm evaluated code can do (in contrast to a straight ruby 'eval') and is constrained to:
 
 * Be totally sandboxed by default
