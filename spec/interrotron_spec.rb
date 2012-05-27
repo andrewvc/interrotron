@@ -41,6 +41,10 @@ describe "running" do
   end
 
   describe "nested expressions" do
+    it "should execute a simple nested expr correctly" do
+      run("(+ (* 2 2) (% 5 4))").should == 5
+    end
+    
     it "should execute complex nested exprs correctly" do
       run("(if false (+ 4 -3) (- 10 (+ 2 (+ 1 1))))").should == 6
     end
@@ -78,11 +82,56 @@ describe "running" do
   end
 
   describe "intermediate compilation" do
-    # Setup an interrotron obj with some default vals
-    tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})
-    compiled = tron.compile("(is_valid my_param)")
-    compiled.call(:my_param => 'foo').should == true
-    compiled.call(:my_param => 'bar').should == false
+    it "should support compiled scripts" do
+      # Setup an interrotron obj with some default vals
+      tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})
+      compiled = tron.compile("(is_valid my_param)")
+      compiled.call(:my_param => 'foo').should == true
+      compiled.call(:my_param => 'bar').should == false
+    end
+  end
+
+  describe "higher order functions" do
+    it "should support calculating a fn at the head" do
+      run('((or * +) 5 5)').should == 25
+    end
+  end
+
+  describe "array" do
+    it "should return a ruby array" do
+      run("(array 1 2 3)").should == [1, 2, 3]
+    end
+
+    it "should detect max vals correctly" do
+      run("(max (array 82 10 100 99.5))").should == 100
+    end
+
+    it "should detect min vals correctly" do
+      run("(min (array 82 10 100 99.5))").should == 10
+    end
+    
+    it "should let you get the head" do
+      run("(first (array 1 2 3))").should == 1
+    end
+
+    it "should let you get the tail" do
+      run("(last (array 1 2 3))").should == 3
+    end
+
+    it "should let you get the length" do
+      run("(length (array 1 2 3 'bob'))").should == 4
+    end
+
+    it "should implement detect correctly in the positive case" do
+      pending "not now"
+      #run("(detect (> 10 n) (array 1 5 30 1))").should 
+    end
+  end
+
+  describe "functions" do
+    it "should have access to vars they've bound" do
+      run("((fn (n) (* n 2)) 5)").should == 10
+    end
   end
 
   describe "readme examples" do

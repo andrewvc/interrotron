@@ -5,6 +5,7 @@ A simple non-turing complete lisp meant to be embedded in apps as a rules engine
 * Be totally sandboxed by default
 * Always finish executing (no infinite loops)
 * Let you easily add variables and functions (simply pass in a hash defining them)
+* Is tiny (only dep is Hashie)
 
 ## Installation
 
@@ -56,8 +57,8 @@ The following functions and variables are built in to Interrotron (though since 
 (floor expr) # equiv to num.floor
 (ceil expr) # equiv to num.ceil
 (round expr) # equiv to num.round
-(max e1, e2, ...) # equiv to [e1, e2, ...].max
-(min e1, e2, ...) # equiv to [e1, e2, ...].min
+(max lst) # returns the largest element in a list
+(min lst) # returns the smallest element in a list
 (to_i expr) # int conversion
 (to_f expr) # float conversion
 (rand) # returns a random float between 0 and 1

@@ -1,6 +1,8 @@
 require "interrotron/version"
 require 'date'
 require 'hashie/mash'
+require 'yaml'
+require 'debugger'
 
 # This is a Lispish DSL meant to define business rules
 # in environments where you do *not* want a turing complete language.
@@ -26,9 +28,27 @@ class Interrotron
   class OpsThresholdError < StandardError; end
   class InterroArgumentError < StandardError; end
 
+  class Macro
+    def initialize(&block)
+      @block = block
+    end
+    def call(*args)
+      @block.call(*args)
+    end
+  end
+
+  class Token
+    attr_accessor :type, :value
+    def initialize(type,value)
+      @type = type
+      @value = value
+    end
+  end
+  
   TOKENS = [
             [:lpar, /\(/],
             [:rpar, /\)/],
+            [:fn, /fn/],
             [:var, /[A-Za-z_><\+\>\<\!\=\*\/\%\-]+/],
             [:num, /(\-?[0-9]+(\.[0-9]+)?)/],
             [:datetime, /#dt\{([^\{]+)\}/, {capture: 1}],
@@ -37,25 +57,26 @@ class Interrotron
             [:str, /'([^'\\]*(\\.[^'\\]*)*)'/, {capture: 1}]
            ]
 
-  # Either passes a value through or invokes call() if passed a proc
-  def self.mat(v)
-    v.class == Proc ? v.call() : v
+  # Quote a ruby variable as a interrotron one
+  def self.qvar(val)
+    Token.new(:var, val.to_s)
   end
-  
+
   DEFAULT_VARS = Hashie::Mash.new({
-    'if' => [proc {|pred,t_clause,f_clause| mat(pred) ? mat(t_clause) : mat(f_clause) }, :lazy_args],
-    'cond' => [proc {|*args|
-                 raise InterroArgumentError, "Cond requires at least args" unless args.length >= 3
+    'if' => Macro.new {|i,pred,t_clause,f_clause| i.run_expr(pred) ? t_clause : f_clause },
+    'cond' => Macro.new {|i,*args|
+                 raise InterroArgumentError, "Cond requires at least 3 args" unless args.length >= 3
                  raise InterroArgumentError, "Cond requires an even # of args!" unless args.length.even?
-                 res = nil
+                 res = qvar('nil')
                  args.each_slice(2).any? {|slice|
                    pred, expr = slice
-                   res = mat(expr) if mat(pred)
+                   res = expr if i.run_expr(pred)
                  }
                  res
-               }, :lazy_args],
-    'and' => [proc {|*args| args.reduce {|m,a| m && mat(a)}}, :lazy_args],
-    'or' => [proc {|*args| r = nil; args.detect {|a| r = mat(a) }; r}, :lazy_args],
+    },
+    'and' => Macro.new {|i,*args| args.all? {|a| i.run_expr(a)} ? args.last : qvar('false')  },
+    'or' => Macro.new {|i,*args| args.detect {|a| i.run_expr(a) } || qvar('false') },
+    'array' => proc {|*args| args},
     'identity' => proc {|a| a},
     'not' => proc {|a| !a},
     '!' => proc {|a| !a},
@@ -76,8 +97,11 @@ class Interrotron
     'floor' =>  proc {|a| a.floor},
     'ceil' => proc {|a| a.ceil},
     'round' => proc {|a| a.round},
-    'max' => proc {|*args| args.max},
-    'min' => proc {|*args| args.min},
+    'max' => proc {|arr| arr.max},
+    'min' => proc {|arr| arr.min},
+    'first' => proc {|arr| arr.first},
+    'last' => proc {|arr| arr.last},
+    'length' => proc {|arr| arr.length},
     'to_i' => proc {|a| a.to_i},
     'to_f' => proc {|a| a.to_f},
     'rand' => proc { rand },
@@ -93,8 +117,9 @@ class Interrotron
   # max_ops => 29, takes an integer which can be used to set a maximum number of expressions
   # to evaluate. It's a crude way to cap execution time
   def initialize(vars={},max_ops=nil)
-    @vars = DEFAULT_VARS.merge(vars)
     @max_ops = max_ops
+    @instance_default_vars = DEFAULT_VARS.merge(vars)
+    @stack = [@instance_default_vars]
   end
   
   def lex(str)
@@ -110,7 +135,7 @@ class Interrotron
           mlen = matches[0].length
           str = str[mlen..-1]
           m = matches[opts[:capture] || 0]
-          tokens << [name, m] unless opts[:discard] == true
+          tokens << Token.new(name, m) unless opts[:discard] == true
           true
         end
       }
@@ -121,74 +146,70 @@ class Interrotron
   
   # Transforms token values to ruby types
   def cast(t)
-    type, val = t
-    new_val = case t[0]
+    new_val = case t.type
               when :num
-                val =~ /\./ ? val.to_f : val.to_i
+                t.value =~ /\./ ? t.value.to_f : t.value.to_i
               when :datetime
-                DateTime.parse(val)
+                DateTime.parse(t.value)
               else
-                val
+                t.value
               end
-    [type, new_val]
+    t.value = new_val
+    t
   end
   
   def parse(tokens)
     return [] if tokens.empty?
     expr = []
     t = tokens.shift
-    if t[0] == :lpar
-      expr << :expr
+    if t.type == :lpar
       while t = tokens[0]
-        if t[0] == :lpar
+        if t.type == :lpar
           expr << parse(tokens)
         else
           tokens.shift
-          break if t[0] == :rpar
+          break if t.type == :rpar
           expr << cast(t)
         end
       end
-    elsif t[0] != :rpar
+    elsif t.type != :rpar
       tokens.shift
-      expr += cast(t)
+      expr << cast(t)
       #raise SyntaxError, "Expected :lparen, got #{t} while parsing #{tokens}"
     end
     expr
   end
   
-  def resolve(token,vars)
-    type, val = token
-    return val unless type == :var
-    raise SyntaxError, "Unbalanced lparen!" if val.is_a?(Array)
-    raise UndefinedVarError, "Var '#{val}' is undefined!" unless vars.has_key?(val)
-    vars[val]
+  def resolve_token(token, stack)
+    stack = @stack
+    case token.type
+    when :var
+      frame = stack.reverse.find {|frame| frame.has_key?(token.value) }
+      raise UndefinedVarError, "Var '#{token.value}' is undefined!" unless frame
+      frame[token.value]
+    else
+      token.value
+    end
+  end
+
+  def fn
+    
   end
   
-  def run_expr(expr,vars=DEFAULT_VARS,max_ops=nil,ops_cnt=0)
+  def run_expr(expr,stack=nil,max_ops=nil,ops_cnt=0)
+    return resolve_token(expr, stack) if expr.is_a?(Token)
     return nil if expr.empty?
     raise OpsThresholdError, "Exceeded max ops(#{max_ops}) allowed!" if max_ops && ops_cnt > max_ops
-    
-    # Handle bare expressions (outside of an sexpr) if they're at the
-    # root of the file by executing a proc that simply returns it
-    fn = expr[0] == :expr ? resolve(expr[1], vars) :  proc { resolve(expr, vars)}
-    
-    # Most FNs get materialized args. For control flow though (like OR and AND), we don't want this, but we pass in procs representing the future value instead
-    lazy_args = (fn.class == Array && fn[1] == :lazy_args)
-    fn = fn[0] if lazy_args
-    
-    args = expr[2..-1].map {|token|
-      type, val = token
-      if type == :expr
-        ops_cnt += 1
-        lazy_args ?
-          proc { run_expr(token,vars,max_ops,ops_cnt) } :
-          run_expr(token,vars,max_ops,ops_cnt)
-      else
-        resolve(token,vars)
-      end
-    }
-    res = fn.call(*args)
-    res
+
+    head = run_expr(expr[0])
+    if head.is_a?(Macro)
+      expanded = head.call(self, *expr[1..-1])
+      run_expr(expanded)
+    else
+      args = expr[1..-1].map {|e|run_expr(e)}
+
+      head.is_a?(Proc) ? head.call(*args) : head
+    end
   end
 
   # Returns a Proc than can be executed with #call
@@ -198,9 +219,10 @@ class Interrotron
     tokens = lex(str)
     ast = parse(tokens)
 
+    puts y(ast)
     proc {|vars| 
-      run_vars = @vars.merge(vars || {})
-      run_expr(ast, run_vars, @max_ops)
+      @stack = [@instance_default_vars.merge(vars)]
+      run_expr(ast)
     }
   end
 
