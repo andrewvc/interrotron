@@ -122,9 +122,13 @@ describe "running" do
       run("(length (array 1 2 3 'bob'))").should == 4
     end
 
-    it "should implement detect correctly in the positive case" do
-      pending "not now"
-      #run("(detect (> 10 n) (array 1 5 30 1))").should 
+    describe "checking membership" do
+      it "should work in the false case" do
+        run("(member? 5 (array 10 20 30))").should be_false
+      end
+      it "should work in the true case" do
+        run("(member? 5 (array 10 5 30))").should be_true
+      end
     end
   end
 

@@ -72,6 +72,12 @@ The following functions and variables are built in to Interrotron (and more are 
 (upcase str) ; uppercases a string
 (downcase) ; lowercases a string
 (now) ; returns the current DateTime
+(array e1, e2, ...) ; creates an array
+(length arr) ; get the length of an array
+(first arr) ; get arr head
+(last arr) ; get arr tail
+(nth pos arr) ; get array at index
+(member? val arr) ; check if the array has a member with value 'val'
 ```
 
 ## Contributing
