@@ -5,12 +5,11 @@ A simple non-turing complete lisp meant to be embedded in apps as a rules engine
 * Be totally sandboxed by default
 * Always finish executing (no infinite loops)
 * Let you easily add variables and functions (simply pass in a hash defining them)
-* Is tiny (only dep is Hashie)
+* Be a small, single file
 
 ## Installation
 
-Add this line to your application's Gemfile:
-    gem 'interrotron'
+Either add the `interrotron` gem, or just copy and paste [interratron.rb](https://github.com/andrewvc/interrotron/blob/master/lib/interrotron.rb)
 
 ## Usage
 
@@ -44,7 +43,7 @@ Interrotron.run("(if false
 # => 6
 ```
 
-The following functions and variables are built in to Interrotron (though since its a lisp they're all just vars!):
+The following functions and variables are built in to Interrotron (and more are on the way!):
 ```clojure
 (if pred then else) # it's an if / else statement
 (cond pred1 clause1 pred2 clause2 true fallbackclause) # like a case statement
