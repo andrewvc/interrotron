@@ -63,19 +63,19 @@ class Interrotron
   end
 
   DEFAULT_VARS = Hashie::Mash.new({
-    'if' => Macro.new {|i,pred,t_clause,f_clause| i.vm_eval(pred) ? t_clause : f_clause },
+    'if' => Macro.new {|i,pred,t_clause,f_clause| i.iro_eval(pred) ? t_clause : f_clause },
     'cond' => Macro.new {|i,*args|
                  raise InterroArgumentError, "Cond requires at least 3 args" unless args.length >= 3
                  raise InterroArgumentError, "Cond requires an even # of args!" unless args.length.even?
                  res = qvar('nil')
                  args.each_slice(2).any? {|slice|
                    pred, expr = slice
-                   res = expr if i.vm_eval(pred)
+                   res = expr if i.iro_eval(pred)
                  }
                  res
     },
-    'and' => Macro.new {|i,*args| args.all? {|a| i.vm_eval(a)} ? args.last : qvar('false')  },
-    'or' => Macro.new {|i,*args| args.detect {|a| i.vm_eval(a) } || qvar('false') },
+    'and' => Macro.new {|i,*args| args.all? {|a| i.iro_eval(a)} ? args.last : qvar('false')  },
+    'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
     'array' => proc {|*args| args},
     'identity' => proc {|a| a},
     'not' => proc {|a| !a},
@@ -149,9 +149,9 @@ class Interrotron
   end
   
   def parse(tokens)
-    return [] if !tokens ||tokens.empty?
-    expr = []
+    return [] if !tokens || tokens.empty?
     
+    expr = []
     while !tokens.empty?
       t = tokens.shift
       case t.type
@@ -163,7 +163,6 @@ class Interrotron
         expr << t
       end
     end
-    
     expr
   end
   
@@ -184,17 +183,17 @@ class Interrotron
     end
   end
   
-  def vm_eval(expr,max_ops=nil)
+  def iro_eval(expr,max_ops=nil)
     return resolve_token(expr) if expr.is_a?(Token)
     return nil if expr.empty?
     register_op
     
-    head = vm_eval(expr[0])
+    head = iro_eval(expr[0])
     if head.is_a?(Macro)
       expanded = head.call(self, *expr[1..-1])
-      vm_eval(expanded)
+      iro_eval(expanded)
     else
-      args = expr[1..-1].map {|e|vm_eval(e)}
+      args = expr[1..-1].map {|e|iro_eval(e)}
       head.is_a?(Proc) ? head.call(*args) : head
     end
   end
@@ -210,7 +209,7 @@ class Interrotron
       reset!
       @max_ops = max_ops
       @stack = [@instance_default_vars.merge(vars)]
-      vm_eval(ast)
+      iro_eval(ast)
     }
   end
 
