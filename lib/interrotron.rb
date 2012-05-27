@@ -44,17 +44,17 @@ class Interrotron
   end
   
   TOKENS = [
-            [:lpar, /\(/],
-            [:rpar, /\)/],
-            [:fn, /fn/],
-            [:var, /[A-Za-z_><\+\>\<\!\=\*\/\%\-\?]+/],
-            [:num, /(\-?[0-9]+(\.[0-9]+)?)/, 
+            [:lpar, /\A\(/],
+            [:rpar, /\A\)/],
+            [:fn, /\Afn/],
+            [:var, /\A[A-Za-z_><\+\>\<\!\=\*\/\%\-\?]+/],
+            [:num, /\A(\-?[0-9]+(\.[0-9]+)?)/, 
              {cast: proc {|v| v =~ /\./ ? v.to_f : v.to_i }}],
-            [:datetime, /#dt\{([^\{]+)\}/,
+            [:datetime, /\A#dt\{([^\{]+)\}/,
              {capture: 1, cast: proc {|v| DateTime.parse(v) }}],
-            [:spc, /\s+/, {discard: true}],
-            [:str, /"([^"\\]*(\\.[^"\\]*)*)"/, {capture: 1}],
-            [:str, /'([^'\\]*(\\.[^'\\]*)*)'/, {capture: 1}]
+            [:spc, /\A\s+/, {discard: true}],
+            [:str, /\A"([^"\\]*(\\.[^"\\]*)*)"/, {capture: 1}],
+            [:str, /\A'([^'\\]*(\\.[^'\\]*)*)'/, {capture: 1}]
            ]
 
   # Quote a ruby variable as a interrotron one
@@ -131,7 +131,7 @@ class Interrotron
       matched_any = TOKENS.any? {|name,matcher,opts|
         opts ||= {}
         matches = matcher.match(str)
-        if !matches || !matches.pre_match.empty?
+        if !matches
           false
         else
           str = str[matches[0].length..-1]
