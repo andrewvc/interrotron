@@ -11,7 +11,7 @@ A simple non-turing complete lisp meant to be embedded in apps as a rules engine
 
 ## Installation
 
-Either add the `interrotron` gem, or just copy and paste [interratron.rb](https://github.com/andrewvc/interrotron/blob/master/lib/interrotron.rb)
+Either add the `interrotron` gem, or just copy and paste [interrotron.rb](https://github.com/andrewvc/interrotron/blob/master/lib/interrotron.rb)
 
 ## Usage
 
