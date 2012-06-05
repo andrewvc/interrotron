@@ -76,15 +76,10 @@ class Interrotron
     },
     'and' => Macro.new {|i,*args| args.all? {|a| i.iro_eval(a)} ? args.last : qvar('false')  },
     'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
-    'let' => Macro.new {|i, variables, *expressions| 
+    'let' => Macro.new {|i, variables, *expressions|
         i.closure(expressions) do |new_stack_frame|
-          (variables.length / 2.0).round.times do |num|
-            value = variables[num*2+1]
-            new_stack_frame[variables[num*2].value] = if value.is_a?(Token)
-              value.value
-            else
-              i.iro_eval(value)
-            end
+          variables.each_slice(2) do |binding,v|
+            new_stack_frame[binding.value] = i.iro_eval(v)
           end
         end
     },
