@@ -209,7 +209,7 @@ class Interrotron
   
   def resolve_token(token)
     if  token.type == :var
-      frame = @stack.reverse.find {|frame| frame.has_key?(token.value) }
+      frame = @stack.find {|frame| frame.has_key?(token.value) }
       raise UndefinedVarError, "Var '#{token.value}' is undefined!" unless frame
       frame[token.value]
     else
@@ -259,7 +259,7 @@ class Interrotron
     yield new_stack_frame
         
     # add new stack frame to stack
-    @stack << new_stack_frame
+    @stack.unshift new_stack_frame
     
     # evaluate the expressions inside the closure and 
     value = execute_expressions(expressions)
@@ -273,22 +273,22 @@ class Interrotron
   
   def set_value(name, value)
     v = value.is_a?(Token) ? value.value : value
-    @stack.last[name.is_a?(Token) ? name.value : name] = v
+    @stack.first[name.is_a?(Token) ? name.value : name] = v
     v
   end
   
   def set_root_value(name, value)
     v = value.is_a?(Token) ? value.value : value
-    @stack.first[name.is_a?(Token) ? name.value : name] = v
+    @stack.last[name.is_a?(Token) ? name.value : name] = v
     v
   end
   
   def stack_root_value(name)
-    @stack.first[name.is_a?(Token) ? name.value : name]
+    @stack.last[name.is_a?(Token) ? name.value : name]
   end
   
   def stack_value(name)
-    @stack.last[name.is_a?(Token) ? name.value : name]
+    @stack.first[name.is_a?(Token) ? name.value : name]
   end
 
   # Returns a Proc than can be executed with #call

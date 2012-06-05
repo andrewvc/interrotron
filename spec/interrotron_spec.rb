@@ -297,7 +297,7 @@ describe Interrotron do
     it "should set the value of the root stack frame" do
       i = Interrotron.new({'x' => 2, 'y' => 3})
       i.reset!
-      i.instance_variable_get(:@stack) << {'x' => 5}
+      i.instance_variable_get(:@stack).unshift({'x' => 5})
       i.stack_root_value('x').should == 2
     end
   end
@@ -306,7 +306,7 @@ describe Interrotron do
     it "should grab the stack root frame value" do
       i = Interrotron.new({'x' => 2, 'y' => 3})
       i.reset!
-      i.instance_variable_get(:@stack) << {'x' => 5}
+      i.instance_variable_get(:@stack).unshift({'x' => 5})
       i.stack_root_value('x').should == 2
     end
   end
@@ -315,7 +315,7 @@ describe Interrotron do
     it "should grab the current stack frame's value" do
       i = Interrotron.new({'x' => 2, 'y' => 3})
       i.reset!
-      i.instance_variable_get(:@stack) << {'x' => 5}
+      i.instance_variable_get(:@stack).unshift({'x' => 5})
       i.stack_value('x').should == 5
     end
   end
@@ -324,7 +324,7 @@ describe Interrotron do
     it "should set the value of the current stack frame" do
       i = Interrotron.new({'x' => 2, 'y' => 3})
       i.reset!
-      i.instance_variable_get(:@stack) << {'x' => 5}
+      i.instance_variable_get(:@stack).unshift({'x' => 5})
       i.set_value('y', 6)
       i.stack_value('y').should == 6
     end
