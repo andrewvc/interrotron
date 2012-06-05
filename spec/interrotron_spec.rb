@@ -145,13 +145,6 @@ describe "running" do
     end
   end
 
-  describe "functions" do
-    it "should have access to vars they've bound" do
-      pending
-      run("((fn (n) (* n 2)) 5)").should == 10
-    end
-  end
-
   describe "readme examples" do
     it "should execute the simple custom var one" do
       Interrotron.run('(> 51 custom_var)', 'custom_var' => 10).should == true
@@ -237,13 +230,13 @@ describe "running" do
     it "should allow multiple variable bindings" do
       run("(let (x 2 y 4) (* x y))").should == 8
     end
-    
-    it "should set the last variable to nil if there is no value for it" do
-      run("(let (x) x)").should == nil
-    end
-    
+        
     it "should return the last expression" do
       run("(let (x 3 z 5) (* x z) (+ x z))").should == 8
+    end
+
+    it "should raise an InterroArgumentError when given an uneven # of args" do
+      lambda { run("(let (x 1 y) 1 2)") }.should raise_exception(Interrotron::InterroArgumentError)
     end
   end
   

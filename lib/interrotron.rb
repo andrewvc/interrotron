@@ -77,6 +77,7 @@ class Interrotron
     'and' => Macro.new {|i,*args| args.all? {|a| i.iro_eval(a)} ? args.last : qvar('false')  },
     'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
     'let' => Macro.new {|i, variables, *expressions|
+        raise InterroArgumentError, "let takes an even # of bindings!" unless variables.length.even?
         i.closure(expressions) do |new_stack_frame|
           variables.each_slice(2) do |binding,v|
             new_stack_frame[binding.value] = i.iro_eval(v)
