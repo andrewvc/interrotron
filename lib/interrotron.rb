@@ -84,15 +84,14 @@ class Interrotron
           end
         end
     },
-    'lambda' => Macro.new {|i, arguments, *expressions|
+    'lambda' => Macro.new {|i, arg_bindings, *expressions|
       Macro.new {|i, *args|
-        raise InterroArgumentError, "lambda requires #{arguments.length} args" unless args.length == arguments.length
+        raise InterroArgumentError, "lambda requires #{arguments.length} args" unless args.length == arg_bindings.length
         
         i.closure(expressions) do |new_stack_frame|
-          (arguments.length).times do |num|
-            v = args[num]
-            v = v.value if v.is_a?(Token)
-            new_stack_frame[arguments[num].value] = v
+          arg_bindings.each_with_index do |binding, j|
+            v = args[j]
+            new_stack_frame[binding.value] = v.is_a?(Token) ? v.value : v
           end
         end
       }
