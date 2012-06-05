@@ -4,4 +4,7 @@ source 'https://rubygems.org'
 gemspec
 gem 'rake'
 gem 'hashie', require: "hashie/mash"
-gem 'ruby-debug19'
+
+group :development, :test do
+  gem 'debugger'
+end
