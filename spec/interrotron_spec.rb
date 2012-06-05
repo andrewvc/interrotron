@@ -235,6 +235,10 @@ describe "running" do
       run("(let (x 3 z 5) (* x z) (+ x z))").should == 8
     end
 
+    it "should allow expressions as values" do
+      run("(let (x (+ 1 1)) (+ 4 x))").should == 6
+    end
+
     it "should raise an InterroArgumentError when given an uneven # of args" do
       lambda { run("(let (x 1 y) 1 2)") }.should raise_exception(Interrotron::InterroArgumentError)
     end
