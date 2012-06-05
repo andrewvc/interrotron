@@ -239,6 +239,11 @@ describe "running" do
       run("(let (x (+ 1 1)) (+ 4 x))").should == 6
     end
 
+    it "should still have the variables bound when outside the stack frame" do
+      run("(let (x 2) 
+             ((let (x 5) (lambda (n) (* x n))) 2))").should == 10
+    end
+
     it "should raise an InterroArgumentError when given an uneven # of args" do
       lambda { run("(let (x 1 y) 1 2)") }.should raise_exception(Interrotron::InterroArgumentError)
     end
