@@ -62,6 +62,11 @@ The following functions and variables are built in to Interrotron (and more are 
 (and e1, e2, ...) ; logical and, returns last arg if true
 (or e1, e2, ...) ; logical or, returns first true arg
 (not expr) ; negates
+(lambda (arg1 arg2 ...) (e1) (e2)) ; creates an anonymous function that requires the given arguments and executes the expressions listed
+(defn function_name (arg1 arg2 ...) (e1) (e2) ...) ; creates a named function in the global scope that requires the arguments and executes the expressions listed
+(let (var_1 var_1_value var_2 var_2_value ...) (e1) (e2) ...) ; creates a new scope that sets the variables to their given values and executes the expressions listed
+(setglobal var_name var_value) ; sets the variable name to the variable value in the global scope
+(expr (e1) (e2) ...) ; executes the set of expressions in sequence
 (! expr) ; negates
 (identity expr) ; returns its argument
 (str s1, s2, ...) ; converts its args to strings, also concatenates them
