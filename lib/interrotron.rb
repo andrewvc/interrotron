@@ -76,51 +76,87 @@ class Interrotron
     },
     'and' => Macro.new {|i,*args| args.all? {|a| i.iro_eval(a)} ? args.last : qvar('false')  },
     'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
-    'apply' => proc {|fn,arr| fn.call(*arr) },
-    'array' => proc {|*args| args},
-    'identity' => proc {|a| a},
-    'not' => proc {|a| !a},
-    '!' => proc {|a| !a},
-    '>' => proc {|a,b| a > b},
-    '<' => proc {|a,b| a < b},
-    '>=' => proc {|a,b| a >= b},
-    '<=' => proc {|a,b| a <= b},
-    '='  => proc {|a,b| a == b},
-    '!=' => proc {|a,b| a != b},
+    'let' => Macro.new {|i, variables, *expressions| 
+        i.closure(expressions) do |new_stack_frame|
+          (variables.length / 2.0).round.times do |num|
+            value = variables[num*2+1]
+            new_stack_frame[variables[num*2].value] = if value.is_a?(Token)
+              value.value
+            else
+              i.iro_eval(value)
+            end
+          end
+        end
+    },
+    'lambda' => Macro.new {|i, arguments, *expressions|
+      Macro.new {|i, *args|
+        raise InterroArgumentError, "lambda requires #{arguments.length} args" unless args.length == arguments.length
+        
+        i.closure(expressions) do |new_stack_frame|
+          (arguments.length).times do |num|
+            v = args[num]
+            v = v.value if v.is_a?(Token)
+            new_stack_frame[arguments[num].value] = v
+          end
+        end
+      }
+    },
+    'defn' => Macro.new {|i, name, arguments, *expressions|
+      macro = i.stack_root_value('lambda').call(i, arguments, *expressions)
+      # add function to the existing @stack
+      i.stack_root_value('setglobal').call(i, name, macro)
+      macro
+    },
+    'setglobal' => Macro.new {|i, name, value|
+      # add function to the existing @stack
+      i.set_root_value(name.value, value)
+    },
+    'expr' => proc {|i, *args| i.execute_expressions(args) },
+    'apply' => proc {|i, fn, *args| fn.call(i, *args) },
+    'array' => proc {|i, *args| args},
+    'identity' => proc {|i, a| a},
+    'not' => proc {|i, a| !a},
+    '!' => proc {|i, a| !a},
+    '>' => proc {|i, a,b| a > b},
+    '<' => proc {|i, a,b| a < b},
+    '>=' => proc {|i, a,b| a >= b},
+    '<=' => proc {|i, a,b| a <= b},
+    '='  => proc {|i, a,b| a == b},
+    '!=' => proc {|i, a,b| a != b},
     'true' => true,
     'false' => false,
     'nil' => nil,
-    '+' => proc {|*args| args.reduce(&:+)},
-    '-' => proc {|*args| args.reduce(&:-)},
-    '*' => proc {|*args| args.reduce(&:*)},
-    '/' => proc {|a,b| a / b},
-    '%' => proc {|a,b| a % b},
-    'floor' =>  proc {|a| a.floor},
-    'ceil' => proc {|a| a.ceil},
-    'round' => proc {|a| a.round},
-    'max' => proc {|arr| arr.max},
-    'min' => proc {|arr| arr.min},
-    'first' => proc {|arr| arr.first},
-    'last' => proc {|arr| arr.last},
-    'nth' => proc {|pos, arr| arr[pos]},
-    'length' => proc {|arr| arr.length},
-    'member?' => proc {|v,arr| arr.member? v},
-    'int' => proc {|a| a.to_i},
-    'float' => proc {|a| a.to_f},
-    'time' => proc {|s| DateTime.parse(s).to_time},
-    'rand' => proc {|n| rand n },
-    'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}},
-    'strip' => proc {|s| s.strip},
-    'upcase' => proc {|a| a.upcase},
-    'downcase' => proc {|a| a.downcase},
-    'now' => proc { Time.now },
-    'seconds' => proc {|n| n.to_i},
-    'minutes' => proc {|n| n.to_i * 60},
-    'hours' => proc {|n| n.to_i * 3600 },
-    'days' => proc {|n| n.to_i * 86400},
-    'months' => proc {|n| n.to_i * 2592000},
-    'ago' => proc {|t| Time.now - t},
-    'from-now' => proc {|t| Time.now + t}
+    '+' => proc {|i, *args| args.reduce(&:+)},
+    '-' => proc {|i, *args| args.reduce(&:-)},
+    '*' => proc {|i, *args| args.reduce(&:*)},
+    '/' => proc {|i, a,b| a / b},
+    '%' => proc {|i, a,b| a % b},
+    'floor' =>  proc {|i, a| a.floor},
+    'ceil' => proc {|i, a| a.ceil},
+    'round' => proc {|i, a| a.round},
+    'max' => proc {|i, arr| arr.max},
+    'min' => proc {|i, arr| arr.min},
+    'first' => proc {|i, arr| arr.first},
+    'last' => proc {|i, arr| arr.last},
+    'nth' => proc {|i, pos, arr| arr[pos]},
+    'length' => proc {|i, arr| arr.length},
+    'member?' => proc {|i, v,arr| arr.member? v},
+    'int' => proc {|i, a| a.to_i},
+    'float' => proc {|i, a| a.to_f},
+    'time' => proc {|i, s| DateTime.parse(s).to_time},
+    'rand' => proc {|i, n| rand n },
+    'str' => proc {|i, *args| args.reduce("") {|m,a| m + a.to_s}},
+    'strip' => proc {|i, s| s.strip},
+    'upcase' => proc {|i, a| a.upcase},
+    'downcase' => proc {|i, a| a.downcase},
+    'now' => proc { |i| Time.now },
+    'seconds' => proc {|i, n| n.to_i},
+    'minutes' => proc {|i, n| n.to_i * 60},
+    'hours' => proc {|i, n| n.to_i * 3600 },
+    'days' => proc {|i, n| n.to_i * 86400},
+    'months' => proc {|i, n| n.to_i * 2592000},
+    'ago' => proc {|i, t| Time.now - t},
+    'from-now' => proc {|i, t| Time.now + t}
   })
 
   def initialize(vars={},max_ops=nil)
@@ -194,20 +230,70 @@ class Interrotron
   end
   
   def iro_eval(expr)
+    return expr if [Fixnum, NilClass, String, Float, TrueClass, FalseClass].include?(expr.class)
     return resolve_token(expr) if expr.is_a?(Token)
-    return nil if expr.empty?
+    return nil if expr.is_a?(Array) and expr.empty?
     register_op
     
     head = iro_eval(expr[0])
     if head.is_a?(Macro)
       expanded = head.call(self, *expr[1..-1])
-      iro_eval(expanded)
+      
+      # no longer evaling if the expanded macro is empty
+      if expanded.is_a?(Array) or expanded.is_a?(Token)
+        iro_eval(expanded) 
+      else
+        expanded
+      end
     elsif head.is_a?(Proc)
       args = expr[1..-1].map {|e| iro_eval(e) }
-      head.call(*args)
+      head.call(self, *args)
     else
-      raise InterroArgumentError, "Non FN/macro Value in head position!"
+      raise InterroArgumentError, "Non FN/macro Value in head position!\n  => #{head}"
     end
+  end
+  
+  def execute_expressions(expressions=[])
+    expressions.map {|expr| iro_eval(expr) }.last
+  end
+  
+  def closure(expressions=[])
+    # create new stack frame for the function
+    new_stack_frame = Hashie::Mash.new({})
+    
+    yield new_stack_frame
+        
+    # add new stack frame to stack
+    @stack << new_stack_frame
+    
+    # evaluate the expressions inside the closure and 
+    value = execute_expressions(expressions)
+    
+    # remove the closure's stack frame from the stack
+    @stack.delete(new_stack_frame)
+    
+    # return the value
+    value
+  end
+  
+  def set_value(name, value)
+    v = value.is_a?(Token) ? value.value : value
+    @stack.last[name.is_a?(Token) ? name.value : name] = v
+    v
+  end
+  
+  def set_root_value(name, value)
+    v = value.is_a?(Token) ? value.value : value
+    @stack.first[name.is_a?(Token) ? name.value : name] = v
+    v
+  end
+  
+  def stack_root_value(name)
+    @stack.first[name.is_a?(Token) ? name.value : name]
+  end
+  
+  def stack_value(name)
+    @stack.last[name.is_a?(Token) ? name.value : name]
   end
 
   # Returns a Proc than can be executed with #call
