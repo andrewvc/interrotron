@@ -62,6 +62,11 @@ class Interrotron
     Token.new(:var, val.to_s)
   end
 
+  # Converts Token objs to their values. If given a non-token, returns the obj
+  def self.reify(obj)
+    obj.is_a?(Token) ? obj.value : obj
+  end
+  
   DEFAULT_VARS = Hashie::Mash.new({
     'if' => Macro.new {|i,pred,t_clause,f_clause| i.iro_eval(pred) ? t_clause : f_clause },
     'cond' => Macro.new {|i,*args|
@@ -91,7 +96,7 @@ class Interrotron
         i.closure(expressions) do |new_stack_frame|
           arg_bindings.each_with_index do |binding, j|
             v = args[j]
-            new_stack_frame[binding.value] = v.is_a?(Token) ? v.value : v
+            new_stack_frame[binding.value] = Interrotron.reify(v)
           end
         end
       }
@@ -270,25 +275,25 @@ class Interrotron
     # return the value
     value
   end
-  
+
   def set_value(name, value)
-    v = value.is_a?(Token) ? value.value : value
-    @stack.first[name.is_a?(Token) ? name.value : name] = v
+    v = Interrotron.reify(value)
+    @stack.first[Interrotron.reify(name)] = v
     v
   end
   
   def set_root_value(name, value)
-    v = value.is_a?(Token) ? value.value : value
-    @stack.last[name.is_a?(Token) ? name.value : name] = v
+    v = Interrotron.reify(value)
+    @stack.last[Interrotron.reify(name)] = v
     v
   end
   
   def stack_root_value(name)
-    @stack.last[name.is_a?(Token) ? name.value : name]
+    @stack.last[Interrotron.reify(name)]
   end
   
   def stack_value(name)
-    @stack.first[name.is_a?(Token) ? name.value : name]
+    @stack.first[Interrotron.reify(name)]
   end
 
   # Returns a Proc than can be executed with #call
