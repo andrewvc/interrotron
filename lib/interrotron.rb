@@ -43,6 +43,8 @@ class Interrotron
     end
   end
   
+  attr_reader :stack
+  
   TOKENS = [
             [:lpar, /\A\(/],
             [:rpar, /\A\)/],
@@ -83,35 +85,36 @@ class Interrotron
     'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
     'let' => Macro.new {|i, variables, *expressions|
         raise InterroArgumentError, "let takes an even # of bindings!" unless variables.length.even?
-        i.closure(expressions) do |new_stack_frame|
+        i.new_closure.execute(expressions) do |new_stack_frame|
           variables.each_slice(2) do |binding,v|
             new_stack_frame[binding.value] = i.iro_eval(v)
           end
         end
     },
     'lambda' => Macro.new {|i, arg_bindings, *expressions|
+      lambda_frame = i.new_closure
       Macro.new {|i, *args|
         raise InterroArgumentError, "lambda requires #{arguments.length} args" unless args.length == arg_bindings.length
         
-        i.closure(expressions) do |new_stack_frame|
+        lambda_frame.execute(expressions) do |new_stack_frame|
           arg_bindings.each_with_index do |binding, j|
             v = args[j]
-            new_stack_frame[binding.value] = Interrotron.reify(v)
+            lambda_frame[binding.value] = Interrotron.reify(v)
           end
         end
       }
     },
     'defn' => Macro.new {|i, name, arguments, *expressions|
-      macro = i.stack_root_value('lambda').call(i, arguments, *expressions)
+      macro = i.interrotron.stack_root_value('lambda').call(i, arguments, *expressions)
       # add function to the existing @stack
-      i.stack_root_value('setglobal').call(i, name, macro)
+      i.interrotron.stack_root_value('setglobal').call(i, name, macro)
       macro
     },
     'setglobal' => Macro.new {|i, name, value|
       # add function to the existing @stack
-      i.set_root_value(name.value, value)
+      i.interrotron.set_root_value(name.value, value)
     },
-    'expr' => proc {|i, *args| i.execute_expressions(args) },
+    'expr' => proc {|i, *args| i.execute(args) },
     'apply' => proc {|i, fn, *args| fn.call(i, *args) },
     'array' => proc {|i, *args| args},
     'identity' => proc {|i, a| a},
@@ -166,7 +169,7 @@ class Interrotron
 
   def reset!
     @op_count = 0
-    @stack = [@instance_default_vars]
+    @stack = StackFrame.new(self, default_vars: @instance_default_vars)
   end
   
   # Converts a string to a flat array of Token objects
@@ -229,71 +232,101 @@ class Interrotron
     end
   end
   
-  def iro_eval(expr)
-    return expr if [Fixnum, NilClass, String, Float, TrueClass, FalseClass].include?(expr.class)
-    return resolve_token(expr) if expr.is_a?(Token)
-    return nil if expr.is_a?(Array) and expr.empty?
-    register_op
+  class StackFrame
     
-    head = iro_eval(expr[0])
-    if head.is_a?(Macro)
-      expanded = head.call(self, *expr[1..-1])
-      
-      # no longer evaling if the expanded macro is empty
-      if expanded.is_a?(Array) or expanded.is_a?(Token)
-        iro_eval(expanded) 
-      else
-        expanded
-      end
-    elsif head.is_a?(Proc)
-      args = expr[1..-1].map {|e| iro_eval(e) }
-      head.call(self, *args)
-    else
-      raise InterroArgumentError, "Non FN/macro Value in head position!\n  => #{head}"
+    attr_reader :interrotron, :parent
+    
+    def initialize(interrotron, opts={})
+      @parent = opts[:parent]
+      @values = opts[:default_vars] || {}
+      @interrotron = interrotron
     end
-  end
-  
-  def execute_expressions(expressions=[])
-    expressions.map {|expr| iro_eval(expr) }.last
-  end
-  
-  def closure(expressions=[])
-    # create new stack frame for the function
-    new_stack_frame = Hashie::Mash.new({})
     
-    yield new_stack_frame
+    def [](name)
+      key = Interrotron.reify(name)
+      if @values.has_key?(key)
+        @values[key]
+      elsif parent
+        parent[key]
+      else
+        raise UndefinedVarError, "Var '#{key}' is undefined!"
+      end
+    end
+    
+    def []=(key, value)
+      v = Interrotron.reify(value)
+      @values[Interrotron.reify(key)] = v
+      v
+    end
+    
+    def new_closure()
+      StackFrame.new(interrotron, parent: self)
+    end
+    
+    def execute(expressions=[], &block)
+      # create new stack frame for the function
+      #new_stack_frame = Hashie::Mash.new({})
+      yield self if block
+          
+      # add new stack frame to stack
+      #@stack.unshift new_stack_frame
+      
+      # evaluate the expressions inside the closure and 
+      value = execute_expressions(expressions)
+      
+      # remove the closure's stack frame from the stack
+      #@stack.delete(new_stack_frame)
+      
+      # return the value
+      value
+    end
+    
+    def iro_eval(expr)
+      return expr if [Fixnum, NilClass, String, Float, TrueClass, FalseClass].include?(expr.class)
+      return resolve_token(expr) if expr.is_a?(Token)
+      return nil if expr.is_a?(Array) and expr.empty?
+      interrotron.register_op
+      
+      head = iro_eval(expr[0])
+      if head.is_a?(Macro)
+        expanded = head.call(self, *expr[1..-1])
         
-    # add new stack frame to stack
-    @stack.unshift new_stack_frame
+        # no longer evaling if the expanded macro is empty
+        if expanded.is_a?(Array) or expanded.is_a?(Token)
+          iro_eval(expanded) 
+        else
+          expanded
+        end
+      elsif head.is_a?(Proc)
+        args = expr[1..-1].map {|e| iro_eval(e) }
+        head.call(self, *args)
+      else
+        raise InterroArgumentError, "Non FN/macro Value in head position!\n  => #{head}"
+      end
+    end
     
-    # evaluate the expressions inside the closure and 
-    value = execute_expressions(expressions)
+    def execute_expressions(expressions=[])
+      expressions.map {|expr| iro_eval(expr) }.last
+    end
     
-    # remove the closure's stack frame from the stack
-    @stack.delete(new_stack_frame)
-    
-    # return the value
-    value
-  end
+    def resolve_token(token)
+      if  token.type == :var
+        self[token.value]
+      else
+        token.value
+      end
+    end
 
-  def set_value(name, value)
-    v = Interrotron.reify(value)
-    @stack.first[Interrotron.reify(name)] = v
-    v
   end
   
   def set_root_value(name, value)
     v = Interrotron.reify(value)
-    @stack.last[Interrotron.reify(name)] = v
+    @stack[Interrotron.reify(name)] = v
     v
   end
   
   def stack_root_value(name)
-    @stack.last[Interrotron.reify(name)]
-  end
-  
-  def stack_value(name)
-    @stack.first[Interrotron.reify(name)]
+    @stack[Interrotron.reify(name)]
   end
 
   # Returns a Proc than can be executed with #call
@@ -304,8 +337,8 @@ class Interrotron
     proc {|vars,max_ops|
       reset!
       @max_ops = max_ops
-      @stack = [@instance_default_vars.merge(vars)]
-      ast.map {|expr| iro_eval(expr)}.last
+      @stack = StackFrame.new(self, default_vars: @instance_default_vars.merge(vars))
+      ast.map {|expr| @stack.iro_eval(expr)}.last
     }
   end
 
