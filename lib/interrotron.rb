@@ -265,17 +265,10 @@ class Interrotron
     
     def execute(expressions=[], &block)
       # create new stack frame for the function
-      #new_stack_frame = Hashie::Mash.new({})
       yield self if block
-          
-      # add new stack frame to stack
-      #@stack.unshift new_stack_frame
       
       # evaluate the expressions inside the closure and 
       value = execute_expressions(expressions)
-      
-      # remove the closure's stack frame from the stack
-      #@stack.delete(new_stack_frame)
       
       # return the value
       value
