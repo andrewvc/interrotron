@@ -55,7 +55,7 @@ describe "running" do
       run("my_var", "my_var" => 123).should == 123
     end
     it "should properly execute proc custom vars" do
-      run("(my_proc 4)", "my_proc" => proc {|a| a*2 }).should == 8
+      run("(my_proc 4)", "my_proc" => proc {|i, a| a*2 }).should == 8
     end
   end
 
@@ -97,7 +97,7 @@ describe "running" do
   describe "intermediate compilation" do
     it "should support compiled scripts" do
       # Setup an interrotron obj with some default vals
-      tron = Interrotron.new(:is_valid => proc {|a| a.reverse == 'oof'})
+      tron = Interrotron.new(:is_valid => proc {|i, a| a.reverse == 'oof'})
       compiled = tron.compile("(is_valid my_param)")
       compiled.call(:my_param => 'foo').should == true
       compiled.call(:my_param => 'bar').should == false
@@ -145,13 +145,6 @@ describe "running" do
     end
   end
 
-  describe "functions" do
-    it "should have access to vars they've bound" do
-      pending
-      run("((fn (n) (* n 2)) 5)").should == 10
-    end
-  end
-
   describe "readme examples" do
     it "should execute the simple custom var one" do
       Interrotron.run('(> 51 custom_var)', 'custom_var' => 10).should == true
@@ -187,7 +180,7 @@ describe "running" do
   
   describe "apply macro" do
     it "should spat an array into another function" do
-      run("(apply + (array 1 2 3))").should == 6
+      run("(apply + 1 2 3)").should == 6
     end
   end
   
@@ -208,4 +201,127 @@ describe "running" do
       run("(time '2012-05-01')").should == DateTime.parse("2012-05-01").to_time
     end
   end
+  
+  describe "expr" do
+    it "should allow multiple expressions to be executed and return the last value" do
+      run("(expr (+ 4 3) (+ 4 3))").should == 7
+    end
+    
+    it "should return the value of the last expression" do
+       run("(expr (+ 4 3) (+ 2 3))").should == 5
+    end
+  end
+  
+  describe "lambda" do
+    it "should have access to vars it's bound" do
+      run("(apply (lambda (x) (* x 2)) 2)").should == 4
+    end
+    
+    it "should return the last expression" do
+      run("(apply (lambda (x) (* x 2) (* x 3)) 2)").should == 6
+    end
+  end
+  
+  describe "let" do
+    it "should have access to vars it's bound" do
+      run("(let (x 2) x)").should == 2
+    end
+    
+    it "should allow multiple variable bindings" do
+      run("(let (x 2 y 4) (* x y))").should == 8
+    end
+        
+    it "should return the last expression" do
+      run("(let (x 3 z 5) (* x z) (+ x z))").should == 8
+    end
+
+    it "should allow expressions as values" do
+      run("(let (x (+ 1 1)) (+ 4 x))").should == 6
+    end
+
+    it "should still have the variables bound when outside the stack frame" do
+      run("(let (x 2) 
+             ((let (x 5) (lambda (n) (* x n))) 2))").should == 10
+    end
+
+    it "should raise an InterroArgumentError when given an uneven # of args" do
+      lambda { run("(let (x 1 y) 1 2)") }.should raise_exception(Interrotron::InterroArgumentError)
+    end
+  end
+  
+  describe "defn" do
+    it "should be able to call the new function" do
+      run("(defn say_hi (name) (+ 'hi there, ' name '!'))\n\n(say_hi 'Justin')").should == "hi there, Justin!"
+    end
+    
+    it "should be able to call the returned function right away" do
+      run("(apply (defn say_hi (name) (+ 'hi there, ' name '!')) 'Andrew')").should == "hi there, Andrew!"
+    end
+  end
+  
+  describe "setglobal" do
+    it "should allow you to call the variable" do
+      run("(setglobal x 5) x").should == 5
+    end
+    
+    it "should allow you to call the variable when it's declared in a closure" do
+      run("(apply (lambda () (setglobal y 4))) y").should == 4
+    end
+  end
 end
+
+describe Interrotron do
+  
+  describe "#set_root_value" do
+    it "should set the value of the root stack frame" do
+      i = Interrotron.new({'x' => 2, 'y' => 3})
+      i.reset!
+      i.set_root_value('x', 4)
+      i.stack_root_value('x').should == 4
+    end
+  end
+  
+  describe "#stack_root_value" do
+    it "should grab the stack root frame value" do
+      i = Interrotron.new({'x' => 2, 'y' => 3})
+      i.reset!
+      #i.instance_variable_get(:@stack).unshift({'x' => 5})
+      i.stack_root_value('x').should == 2
+    end
+  end
+end
+
+describe Interrotron::StackFrame do
+  
+  describe "#execute_expressions" do
+    it "should allow multiple expressions to be executed and return the last value" do
+      i = Interrotron.new()
+      i.reset!
+      ast = i.parse(i.lex("(+ 4 3)(+ 4 3)"))
+      i.stack.execute_expressions(ast).should == 7
+    end
+    
+    it "should return the value of the last expression" do
+      i = Interrotron.new()
+      i.reset!
+      ast = i.parse(i.lex("(+ 4 3)(+ 2 3)"))
+      i.stack.execute_expressions(ast).should == 5
+    end
+  end
+  
+  describe "#closure" do
+    it "should allow for variables to be modified" do
+      i = Interrotron.new()
+      my_proc = i.compile("(apply (lambda (x) x) 5)")
+      my_proc.call({'x' => 2, 'y' => 3}, nil).should == 5
+    end
+    
+    it "variables in the parent closure should not be overridden" do
+      i = Interrotron.new()
+      my_proc = i.compile("(apply (lambda (x) x) 5)")
+      my_proc.call({x: 2, y: 3}, nil)
+      i.stack['x'].should == 2
+    end
+  end
+end
+

@@ -4,3 +4,7 @@ source 'https://rubygems.org'
 gemspec
 gem 'rake'
 gem 'hashie', require: "hashie/mash"
+
+group :development, :test do
+  gem 'debugger'
+end

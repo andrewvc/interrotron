@@ -43,6 +43,8 @@ class Interrotron
     end
   end
   
+  attr_reader :stack
+  
   TOKENS = [
             [:lpar, /\A\(/],
             [:rpar, /\A\)/],
@@ -62,6 +64,11 @@ class Interrotron
     Token.new(:var, val.to_s)
   end
 
+  # Converts Token objs to their values. If given a non-token, returns the obj
+  def self.reify(obj)
+    obj.is_a?(Token) ? obj.value : obj
+  end
+  
   DEFAULT_VARS = Hashie::Mash.new({
     'if' => Macro.new {|i,pred,t_clause,f_clause| i.iro_eval(pred) ? t_clause : f_clause },
     'cond' => Macro.new {|i,*args|
@@ -76,51 +83,83 @@ class Interrotron
     },
     'and' => Macro.new {|i,*args| args.all? {|a| i.iro_eval(a)} ? args.last : qvar('false')  },
     'or' => Macro.new {|i,*args| args.detect {|a| i.iro_eval(a) } || qvar('false') },
-    'apply' => proc {|fn,arr| fn.call(*arr) },
-    'array' => proc {|*args| args},
-    'identity' => proc {|a| a},
-    'not' => proc {|a| !a},
-    '!' => proc {|a| !a},
-    '>' => proc {|a,b| a > b},
-    '<' => proc {|a,b| a < b},
-    '>=' => proc {|a,b| a >= b},
-    '<=' => proc {|a,b| a <= b},
-    '='  => proc {|a,b| a == b},
-    '!=' => proc {|a,b| a != b},
+    'let' => Macro.new {|i, variables, *expressions|
+        raise InterroArgumentError, "let takes an even # of bindings!" unless variables.length.even?
+        i.new_closure.execute(expressions) do |new_stack_frame|
+          variables.each_slice(2) do |binding,v|
+            new_stack_frame[binding.value] = i.iro_eval(v)
+          end
+        end
+    },
+    'lambda' => Macro.new {|i, arg_bindings, *expressions|
+      lambda_frame = i.new_closure
+      Macro.new {|i, *args|
+        raise InterroArgumentError, "lambda requires #{arguments.length} args" unless args.length == arg_bindings.length
+        
+        lambda_frame.execute(expressions) do |new_stack_frame|
+          arg_bindings.each_with_index do |binding, j|
+            v = args[j]
+            lambda_frame[binding.value] = Interrotron.reify(v)
+          end
+        end
+      }
+    },
+    'defn' => Macro.new {|i, name, arguments, *expressions|
+      macro = i.interrotron.stack_root_value('lambda').call(i, arguments, *expressions)
+      # add function to the existing @stack
+      i.interrotron.stack_root_value('setglobal').call(i, name, macro)
+      macro
+    },
+    'setglobal' => Macro.new {|i, name, value|
+      # add function to the existing @stack
+      i.interrotron.set_root_value(name.value, value)
+    },
+    'expr' => proc {|i, *args| i.execute(args) },
+    'apply' => proc {|i, fn, *args| fn.call(i, *args) },
+    'array' => proc {|i, *args| args},
+    'identity' => proc {|i, a| a},
+    'not' => proc {|i, a| !a},
+    '!' => proc {|i, a| !a},
+    '>' => proc {|i, a,b| a > b},
+    '<' => proc {|i, a,b| a < b},
+    '>=' => proc {|i, a,b| a >= b},
+    '<=' => proc {|i, a,b| a <= b},
+    '='  => proc {|i, a,b| a == b},
+    '!=' => proc {|i, a,b| a != b},
     'true' => true,
     'false' => false,
     'nil' => nil,
-    '+' => proc {|*args| args.reduce(&:+)},
-    '-' => proc {|*args| args.reduce(&:-)},
-    '*' => proc {|*args| args.reduce(&:*)},
-    '/' => proc {|a,b| a / b},
-    '%' => proc {|a,b| a % b},
-    'floor' =>  proc {|a| a.floor},
-    'ceil' => proc {|a| a.ceil},
-    'round' => proc {|a| a.round},
-    'max' => proc {|arr| arr.max},
-    'min' => proc {|arr| arr.min},
-    'first' => proc {|arr| arr.first},
-    'last' => proc {|arr| arr.last},
-    'nth' => proc {|pos, arr| arr[pos]},
-    'length' => proc {|arr| arr.length},
-    'member?' => proc {|v,arr| arr.member? v},
-    'int' => proc {|a| a.to_i},
-    'float' => proc {|a| a.to_f},
-    'time' => proc {|s| DateTime.parse(s).to_time},
-    'rand' => proc {|n| rand n },
-    'str' => proc {|*args| args.reduce("") {|m,a| m + a.to_s}},
-    'strip' => proc {|s| s.strip},
-    'upcase' => proc {|a| a.upcase},
-    'downcase' => proc {|a| a.downcase},
-    'now' => proc { Time.now },
-    'seconds' => proc {|n| n.to_i},
-    'minutes' => proc {|n| n.to_i * 60},
-    'hours' => proc {|n| n.to_i * 3600 },
-    'days' => proc {|n| n.to_i * 86400},
-    'months' => proc {|n| n.to_i * 2592000},
-    'ago' => proc {|t| Time.now - t},
-    'from-now' => proc {|t| Time.now + t}
+    '+' => proc {|i, *args| args.reduce(&:+)},
+    '-' => proc {|i, *args| args.reduce(&:-)},
+    '*' => proc {|i, *args| args.reduce(&:*)},
+    '/' => proc {|i, a,b| a / b},
+    '%' => proc {|i, a,b| a % b},
+    'floor' =>  proc {|i, a| a.floor},
+    'ceil' => proc {|i, a| a.ceil},
+    'round' => proc {|i, a| a.round},
+    'max' => proc {|i, arr| arr.max},
+    'min' => proc {|i, arr| arr.min},
+    'first' => proc {|i, arr| arr.first},
+    'last' => proc {|i, arr| arr.last},
+    'nth' => proc {|i, pos, arr| arr[pos]},
+    'length' => proc {|i, arr| arr.length},
+    'member?' => proc {|i, v,arr| arr.member? v},
+    'int' => proc {|i, a| a.to_i},
+    'float' => proc {|i, a| a.to_f},
+    'time' => proc {|i, s| DateTime.parse(s).to_time},
+    'rand' => proc {|i, n| rand n },
+    'str' => proc {|i, *args| args.reduce("") {|m,a| m + a.to_s}},
+    'strip' => proc {|i, s| s.strip},
+    'upcase' => proc {|i, a| a.upcase},
+    'downcase' => proc {|i, a| a.downcase},
+    'now' => proc { |i| Time.now },
+    'seconds' => proc {|i, n| n.to_i},
+    'minutes' => proc {|i, n| n.to_i * 60},
+    'hours' => proc {|i, n| n.to_i * 3600 },
+    'days' => proc {|i, n| n.to_i * 86400},
+    'months' => proc {|i, n| n.to_i * 2592000},
+    'ago' => proc {|i, t| Time.now - t},
+    'from-now' => proc {|i, t| Time.now + t}
   })
 
   def initialize(vars={},max_ops=nil)
@@ -130,7 +169,7 @@ class Interrotron
 
   def reset!
     @op_count = 0
-    @stack = [@instance_default_vars]
+    @stack = StackFrame.new(self, default_vars: @instance_default_vars)
   end
   
   # Converts a string to a flat array of Token objects
@@ -178,7 +217,7 @@ class Interrotron
   
   def resolve_token(token)
     if  token.type == :var
-      frame = @stack.reverse.find {|frame| frame.has_key?(token.value) }
+      frame = @stack.find {|frame| frame.has_key?(token.value) }
       raise UndefinedVarError, "Var '#{token.value}' is undefined!" unless frame
       frame[token.value]
     else
@@ -193,21 +232,94 @@ class Interrotron
     end
   end
   
-  def iro_eval(expr)
-    return resolve_token(expr) if expr.is_a?(Token)
-    return nil if expr.empty?
-    register_op
+  class StackFrame
     
-    head = iro_eval(expr[0])
-    if head.is_a?(Macro)
-      expanded = head.call(self, *expr[1..-1])
-      iro_eval(expanded)
-    elsif head.is_a?(Proc)
-      args = expr[1..-1].map {|e| iro_eval(e) }
-      head.call(*args)
-    else
-      raise InterroArgumentError, "Non FN/macro Value in head position!"
+    attr_reader :interrotron, :parent
+    
+    def initialize(interrotron, opts={})
+      @parent = opts[:parent]
+      @values = opts[:default_vars] || {}
+      @interrotron = interrotron
     end
+    
+    def [](name)
+      key = Interrotron.reify(name)
+      if @values.has_key?(key)
+        @values[key]
+      elsif parent
+        parent[key]
+      else
+        raise UndefinedVarError, "Var '#{key}' is undefined!"
+      end
+    end
+    
+    def []=(key, value)
+      v = Interrotron.reify(value)
+      @values[Interrotron.reify(key)] = v
+      v
+    end
+    
+    def new_closure()
+      StackFrame.new(interrotron, parent: self)
+    end
+    
+    def execute(expressions=[], &block)
+      # create new stack frame for the function
+      yield self if block
+      
+      # evaluate the expressions inside the closure and 
+      value = execute_expressions(expressions)
+      
+      # return the value
+      value
+    end
+    
+    def iro_eval(expr)
+      return expr if [Fixnum, NilClass, String, Float, TrueClass, FalseClass].include?(expr.class)
+      return resolve_token(expr) if expr.is_a?(Token)
+      return nil if expr.is_a?(Array) and expr.empty?
+      interrotron.register_op
+      
+      head = iro_eval(expr[0])
+      if head.is_a?(Macro)
+        expanded = head.call(self, *expr[1..-1])
+        
+        # no longer evaling if the expanded macro is empty
+        if expanded.is_a?(Array) or expanded.is_a?(Token)
+          iro_eval(expanded) 
+        else
+          expanded
+        end
+      elsif head.is_a?(Proc)
+        args = expr[1..-1].map {|e| iro_eval(e) }
+        head.call(self, *args)
+      else
+        raise InterroArgumentError, "Non FN/macro Value in head position!\n  => #{head}"
+      end
+    end
+    
+    def execute_expressions(expressions=[])
+      expressions.map {|expr| iro_eval(expr) }.last
+    end
+    
+    def resolve_token(token)
+      if  token.type == :var
+        self[token.value]
+      else
+        token.value
+      end
+    end
+
+  end
+  
+  def set_root_value(name, value)
+    v = Interrotron.reify(value)
+    @stack[Interrotron.reify(name)] = v
+    v
+  end
+  
+  def stack_root_value(name)
+    @stack[Interrotron.reify(name)]
   end
 
   # Returns a Proc than can be executed with #call
@@ -218,8 +330,8 @@ class Interrotron
     proc {|vars,max_ops|
       reset!
       @max_ops = max_ops
-      @stack = [@instance_default_vars.merge(vars)]
-      ast.map {|expr| iro_eval(expr)}.last
+      @stack = StackFrame.new(self, default_vars: @instance_default_vars.merge(vars))
+      ast.map {|expr| @stack.iro_eval(expr)}.last
     }
   end
 
