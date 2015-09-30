@@ -42,7 +42,7 @@ Interrotron.run('(> #t{2010-09-04} start_date)', start_date: DateTime.parse('201
 Interrotron.run('(> (now) (ago (hours 12)))')
 # => true
 
-# You can, of course, create arbitarily complex exprs
+# You can, of course, create arbitrarily complex exprs
 Interrotron.run("(if false
                      (+ 4 -3)
                      (- 10 (+ 2 (+ 1 1))))")
